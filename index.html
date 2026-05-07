@@ -3,35 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GWYF Seed Finder V5</title>
+    <title>GWYF Seed Finder V6</title>
     <style>
-        :root { --primary: #00ff95; --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --warn: #ffcc00; --path-bg: #010409; }
+        :root { --primary: #00ff95; --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --warn: #ffcc00; --lookup: #00d4ff; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 900px; margin: 0 auto; padding: 20px; }
         .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
         h1 { color: var(--primary); text-align: center; margin-bottom: 5px; }
         
-        /* Save Path Section */
-        .path-section { background: var(--path-bg); border-left: 4px solid var(--primary); padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-        .path-label { font-size: 0.75em; color: var(--primary); font-weight: bold; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        /* Sections */
+        .section { background: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .section-title { font-size: 0.75em; color: var(--primary); font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: block; border-bottom: 1px solid #333; padding-bottom: 5px; }
+
+        /* Path Styling */
         .path-container { display: flex; gap: 10px; align-items: center; }
-        .path-text { font-family: monospace; font-size: 0.9em; color: #8b949e; flex: 1; word-break: break-all; }
-        .copy-small-btn { background: #30363d; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer; white-space: nowrap; }
-        .copy-small-btn:hover { background: #484f58; }
+        .path-text { font-family: monospace; font-size: 0.85em; color: #8b949e; flex: 1; }
+
+        /* Lookup Styling */
+        .lookup-grid { display: flex; gap: 10px; align-items: flex-end; }
+        .lookup-input { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        #checkSeedInput { background: #010409; border: 1px solid var(--lookup); color: #fff; padding: 10px; border-radius: 6px; font-weight: bold; }
+        #lookupBtn { background: var(--lookup); color: #000; border: none; padding: 11px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         .warning-box { background: rgba(255, 204, 0, 0.1); border: 1px solid var(--warn); color: var(--warn); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85em; }
 
-        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 20px 0; }
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin: 15px 0; }
         .item-option { display: flex; align-items: center; background: #21262d; padding: 10px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); transition: 0.15s; font-size: 0.85em; }
         .item-option.selected { border-color: var(--primary); background: rgba(0,255,149,0.1); }
         .item-option.disabled { opacity: 0.3; cursor: not-allowed; }
         .item-option input { margin-right: 10px; pointer-events: none; }
 
-        .controls { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; background: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; align-items: flex-end; }
-        .input-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 0.75em; color: #8b949e; font-weight: bold; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px; align-items: flex-end; }
         input { background: #010409; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 6px; }
         
-        button { background: var(--primary); color: #0d1117; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button { background: var(--primary); color: #0d1117; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.8; }
         #stopBtn { background: #da3633; color: white; }
 
         #progress-box { margin: 20px 0; display: none; }
@@ -46,37 +51,51 @@
         .seed-val { font-family: monospace; color: #ffcc00; font-weight: bold; cursor: pointer; text-decoration: underline; }
         .tag { padding: 3px 8px; border-radius: 4px; font-size: 0.8em; background: #0d1117; color: #444; border: 1px solid #333; margin-right: 5px; display: inline-block; margin-bottom: 3px; }
         .tag.target { border-color: var(--primary); color: var(--primary); background: rgba(0,255,149,0.1); }
+        .tag.highlight { border-color: var(--lookup); color: var(--lookup); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h1>GWYF Seed Finder</h1>
+    <h1>GWYF Seed Finder V6</h1>
 
-    <!-- Path Info -->
-    <div class="path-section">
-        <span class="path-label">Saves Folder Path (Win + R)</span>
+    <!-- 1. Path Info -->
+    <div class="section">
+        <span class="section-title">Saves Folder Path (Win + R)</span>
         <div class="path-container">
             <div class="path-text" id="savePath">%AppData%\..\LocalLow\TENSTACK\Gamble With Your Friends\Saves</div>
-            <button class="copy-small-btn" onclick="copyPath()">Copy Path</button>
+            <button style="padding: 5px 10px; font-size: 0.8em; background:#30363d; color:#fff;" onclick="copyPath()">Copy Path</button>
+        </div>
+    </div>
+
+    <!-- 2. Single Seed Lookup -->
+    <div class="section" style="border-color: var(--lookup);">
+        <span class="section-title" style="color: var(--lookup);">Query Specific Seed</span>
+        <div class="lookup-grid">
+            <div class="lookup-input">
+                <label style="font-size: 0.7em; color: #8b949e;">ENTER SEED NUMBER</label>
+                <input type="number" id="checkSeedInput" placeholder="e.g. -11947">
+            </div>
+            <button id="lookupBtn" onclick="lookupSeed()">Check Shop Contents</button>
         </div>
     </div>
     
     <div class="warning-box">
-        <b>NOTE:</b> If you search 6 items, the 6th slot might be replaced by a <b>Mystery Box</b> in-game despite the result shown below.
+        <b>NOTE:</b> In the 6th slot, the item has a high chance of being replaced by a <b>Mystery Box</b> in-game.
     </div>
 
-    <div style="font-size: 0.9em; margin-bottom: 10px;">
-        Selected: <span id="count" style="color:var(--primary); font-weight:bold;">0</span> / 6
-    </div>
-    <div class="item-grid" id="itemGrid"></div>
-
-    <div class="controls">
-        <div class="input-group"><label>Start Seed</label><input type="number" id="start" value="-2000"></div>
-        <div class="input-group"><label>End Seed</label><input type="number" id="end" value="2000"></div>
-        <div style="display:flex; gap:10px;">
-            <button id="searchBtn" onclick="startSearch()" style="flex:2;">Search Seeds</button>
-            <button id="stopBtn" onclick="stopSearch()" disabled style="flex:1;">Stop</button>
+    <!-- 3. Range Search -->
+    <div class="section">
+        <span class="section-title">Find Seeds in Range</span>
+        <div style="font-size: 0.85em; margin-bottom: 5px;">Select Required Targets (Max 6): <span id="count" style="color:var(--primary); font-weight:bold;">0</span></div>
+        <div class="item-grid" id="itemGrid"></div>
+        <div class="controls">
+            <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size: 0.75em; color: #8b949e;">START</label><input type="number" id="start" value="-2000"></div>
+            <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size: 0.75em; color: #8b949e;">END</label><input type="number" id="end" value="2000"></div>
+            <div style="display:flex; gap:10px;">
+                <button id="searchBtn" onclick="startSearch()" style="flex:2;">Search Range</button>
+                <button id="stopBtn" onclick="stopSearch()" disabled style="flex:1;">Stop</button>
+            </div>
         </div>
     </div>
 
@@ -93,11 +112,11 @@
             <thead>
                 <tr>
                     <th style="width: 100px;">Seed</th>
-                    <th>Required Items Found (All slots 1-6)</th>
+                    <th>Shop Contents (Slot 1-6)</th>
                 </tr>
             </thead>
             <tbody id="results">
-                <tr><td colspan="2" style="text-align:center; padding:30px; color:#555;">Select items and click Search.</td></tr>
+                <tr><td colspan="2" style="text-align:center; padding:30px; color:#555;">Query a seed above or search a range.</td></tr>
             </tbody>
         </table>
     </div>
@@ -159,7 +178,6 @@ LootItems.forEach(item => {
     itemGrid.appendChild(div);
 });
 
-let searching = false;
 function getHash(x, y, z, seed, q) {
     let h = Math.imul(seed, 31) + q; h |= 0;
     h = Math.imul(h, 31) + x; h |= 0;
@@ -179,7 +197,7 @@ function getShuffled(seed, id) {
     return list;
 }
 
-function simulate(seed, targets) {
+function getShopItems(seed) {
     let assigned = new Set();
     let shop = [];
     let listA = getShuffled(seed, 45018);
@@ -196,17 +214,35 @@ function simulate(seed, targets) {
     let h6 = getHash(shelfCoords[5][0], shelfCoords[5][1], shelfCoords[5][2], seed, 0);
     let rng6 = new NetRandom(Math.imul(h6, 31) + 49038);
     shop.push(listB[rng6.next(0, listB.length) % listB.length]);
-
-    let hits = shop.filter(item => targets.includes(item)).length;
-    return { ok: hits === targets.length, shop };
+    return shop;
 }
 
+// Single Seed Lookup
+function lookupSeed() {
+    const seed = parseInt(document.getElementById('checkSeedInput').value);
+    if (isNaN(seed)) return alert("Please enter a valid seed number.");
+    const targets = Array.from(document.querySelectorAll('#itemGrid input:checked')).map(i => i.value);
+    const shop = getShopItems(seed);
+    const resBody = document.getElementById('results');
+    
+    let row = `<tr style="background: rgba(0, 212, 255, 0.1);">
+        <td class="seed-val" onclick="copyValue('${seed}')">${seed}</td>
+        <td>${shop.map((n, i) => {
+            let cls = targets.includes(n) ? 'target' : 'highlight';
+            return `<span class="tag ${cls}"><b>#${i+1}</b>${n}</span>`;
+        }).join('')}</td>
+    </tr>`;
+    resBody.insertAdjacentHTML('afterbegin', row);
+}
+
+// Range Search
+let searching = false;
 async function startSearch() {
     const start = parseInt(document.getElementById('start').value);
     const end = parseInt(document.getElementById('end').value);
     const targets = Array.from(document.querySelectorAll('#itemGrid input:checked')).map(i => i.value);
     const resBody = document.getElementById('results');
-    if (targets.length === 0) return alert("Select targets first.");
+    if (targets.length === 0) return alert("Select target items to search for.");
     
     searching = true;
     document.getElementById('searchBtn').disabled = true;
@@ -214,18 +250,18 @@ async function startSearch() {
     document.getElementById('progress-box').style.display = 'block';
     resBody.innerHTML = "";
 
-    const range = end - start;
     for (let cur = start; cur < end && searching; cur += 500) {
-        let p = ((cur - start) / range) * 100;
+        let p = ((cur - start) / (end - start)) * 100;
         document.getElementById('bar').style.width = p + "%";
         document.getElementById('percent').innerText = Math.round(p) + "%";
-        document.getElementById('status').innerText = `Checking: ${cur}`;
+        document.getElementById('status').innerText = `Scanning: ${cur}`;
         for (let s = cur; s < Math.min(cur + 500, end); s++) {
-            let r = simulate(s, targets);
-            if (r.ok) {
+            let shop = getShopItems(s);
+            let hits = shop.filter(item => targets.includes(item)).length;
+            if (hits === targets.length) {
                 let row = `<tr>
                     <td class="seed-val" onclick="copyValue('${s}')">${s}</td>
-                    <td>${r.shop.map((n, i) => `<span class="tag ${targets.includes(n)?'target':''}"><b>#${i+1}</b>${n}</span>`).join('')}</td>
+                    <td>${shop.map((n, i) => `<span class="tag ${targets.includes(n)?'target':''}"><b>#${i+1}</b>${n}</span>`).join('')}</td>
                 </tr>`;
                 resBody.insertAdjacentHTML('beforeend', row);
             }
@@ -235,18 +271,12 @@ async function startSearch() {
     searching = false;
     document.getElementById('searchBtn').disabled = false;
     document.getElementById('stopBtn').disabled = true;
-    document.getElementById('status').innerText = "Finished";
+    document.getElementById('status').innerText = "Search Finished";
 }
 
 function stopSearch() { searching = false; }
-function copyPath() { 
-    navigator.clipboard.writeText(document.getElementById('savePath').innerText); 
-    alert("Save path copied!");
-}
-function copyValue(val) {
-    navigator.clipboard.writeText(val);
-    alert("Seed " + val + " copied!");
-}
+function copyPath() { navigator.clipboard.writeText(document.getElementById('savePath').innerText); alert("Save path copied!"); }
+function copyValue(val) { navigator.clipboard.writeText(val); alert("Seed " + val + " copied!"); }
 </script>
 </body>
 </html>
