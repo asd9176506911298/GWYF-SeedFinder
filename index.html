@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GWYF Seed Finder V5</title>
+    <style>
+        :root { --primary: #00ff95; --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --warn: #ffcc00; --path-bg: #010409; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 900px; margin: 0 auto; padding: 20px; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+        h1 { color: var(--primary); text-align: center; margin-bottom: 5px; }
+        
+        /* Save Path Section */
+        .path-section { background: var(--path-bg); border-left: 4px solid var(--primary); padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        .path-label { font-size: 0.75em; color: var(--primary); font-weight: bold; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .path-container { display: flex; gap: 10px; align-items: center; }
+        .path-text { font-family: monospace; font-size: 0.9em; color: #8b949e; flex: 1; word-break: break-all; }
+        .copy-small-btn { background: #30363d; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer; white-space: nowrap; }
+        .copy-small-btn:hover { background: #484f58; }
+
+        .warning-box { background: rgba(255, 204, 0, 0.1); border: 1px solid var(--warn); color: var(--warn); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85em; }
+
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 20px 0; }
+        .item-option { display: flex; align-items: center; background: #21262d; padding: 10px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); transition: 0.15s; font-size: 0.85em; }
+        .item-option.selected { border-color: var(--primary); background: rgba(0,255,149,0.1); }
+        .item-option.disabled { opacity: 0.3; cursor: not-allowed; }
+        .item-option input { margin-right: 10px; pointer-events: none; }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; background: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; align-items: flex-end; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.75em; color: #8b949e; font-weight: bold; }
+        input { background: #010409; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 6px; }
+        
+        button { background: var(--primary); color: #0d1117; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        #stopBtn { background: #da3633; color: white; }
+
+        #progress-box { margin: 20px 0; display: none; }
+        .bar-bg { background: #30363d; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+        .bar-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
+
+        .table-scroll { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; background: #161b22; }
+        th { background: #21262d; padding: 12px; text-align: left; color: var(--primary); border-bottom: 2px solid var(--border); font-size: 0.9em; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9em; }
+        
+        .seed-val { font-family: monospace; color: #ffcc00; font-weight: bold; cursor: pointer; text-decoration: underline; }
+        .tag { padding: 3px 8px; border-radius: 4px; font-size: 0.8em; background: #0d1117; color: #444; border: 1px solid #333; margin-right: 5px; display: inline-block; margin-bottom: 3px; }
+        .tag.target { border-color: var(--primary); color: var(--primary); background: rgba(0,255,149,0.1); }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>GWYF Seed Finder</h1>
+
+    <!-- Path Info -->
+    <div class="path-section">
+        <span class="path-label">Saves Folder Path (Win + R)</span>
+        <div class="path-container">
+            <div class="path-text" id="savePath">%AppData%\..\LocalLow\TENSTACK\Gamble With Your Friends\Saves</div>
+            <button class="copy-small-btn" onclick="copyPath()">Copy Path</button>
+        </div>
+    </div>
+    
+    <div class="warning-box">
+        <b>NOTE:</b> If you search 6 items, the 6th slot might be replaced by a <b>Mystery Box</b> in-game despite the result shown below.
+    </div>
+
+    <div style="font-size: 0.9em; margin-bottom: 10px;">
+        Selected: <span id="count" style="color:var(--primary); font-weight:bold;">0</span> / 6
+    </div>
+    <div class="item-grid" id="itemGrid"></div>
+
+    <div class="controls">
+        <div class="input-group"><label>Start Seed</label><input type="number" id="start" value="-2000"></div>
+        <div class="input-group"><label>End Seed</label><input type="number" id="end" value="2000"></div>
+        <div style="display:flex; gap:10px;">
+            <button id="searchBtn" onclick="startSearch()" style="flex:2;">Search Seeds</button>
+            <button id="stopBtn" onclick="stopSearch()" disabled style="flex:1;">Stop</button>
+        </div>
+    </div>
+
+    <div id="progress-box">
+        <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#8b949e;">
+            <span id="status">Ready</span>
+            <span id="percent">0%</span>
+        </div>
+        <div class="bar-bg"><div class="bar-fill" id="bar"></div></div>
+    </div>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 100px;">Seed</th>
+                    <th>Required Items Found (All slots 1-6)</th>
+                </tr>
+            </thead>
+            <tbody id="results">
+                <tr><td colspan="2" style="text-align:center; padding:30px; color:#555;">Select items and click Search.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const LootItems = ["UpgradeBonusDraw", "UpgradeInsurance", "UpgradeGamblersConfidence", "UpgradeStakeHolder", "Coordinator", "Drink", "GoldenChip", "ImmunityCross", "Microphone", "Taser", "DevilsReel", "QuotaGun", "MysteryBox", "AngelsReel", "TimeMachine"];
+const shelfCoords = [[1172, 265, 1754], [1297, 265, 1754], [1422, 265, 1754], [1547, 265, 1754], [1672, 265, 1754], [1797, 265, 1754]];
+
+class NetRandom {
+    constructor(seed) {
+        let s = (seed === -2147483648) ? 2147483647 : Math.abs(seed);
+        this.seedArray = new Array(56);
+        let mj = 161803398 - s;
+        this.seedArray[55] = mj;
+        let mk = 1;
+        for (let i = 1; i < 55; i++) {
+            let ii = (21 * i) % 55; this.seedArray[ii] = mk;
+            mk = mj - mk; if (mk < 0) mk += 2147483647;
+            mj = this.seedArray[ii];
+        }
+        for (let k = 1; k < 5; k++) {
+            for (let i = 1; i < 56; i++) {
+                this.seedArray[i] -= this.seedArray[1 + (i + 30) % 55];
+                if (this.seedArray[i] < 0) this.seedArray[i] += 2147483647;
+            }
+        }
+        this.inext = 0; this.inextp = 21;
+    }
+    sample() {
+        if (++this.inext >= 56) this.inext = 1;
+        if (++this.inextp >= 56) this.inextp = 1;
+        let ret = this.seedArray[this.inext] - this.seedArray[this.inextp];
+        if (ret < 0) ret += 2147483647;
+        this.seedArray[this.inext] = ret;
+        return ret;
+    }
+    next(min, max) { return Math.floor((this.sample() * (1.0 / 2147483647.0)) * (max - min)) + min; }
+}
+
+const itemGrid = document.getElementById('itemGrid');
+LootItems.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'item-option';
+    div.innerHTML = `<input type="checkbox" value="${item}"><span>${item}</span>`;
+    div.onclick = () => {
+        const cb = div.querySelector('input');
+        const checked = document.querySelectorAll('#itemGrid input:checked');
+        if (!cb.checked && checked.length >= 6) return;
+        cb.checked = !cb.checked;
+        div.classList.toggle('selected', cb.checked);
+        document.getElementById('count').innerText = document.querySelectorAll('#itemGrid input:checked').length;
+        document.querySelectorAll('.item-option').forEach(opt => {
+            const c = opt.querySelector('input');
+            if (document.querySelectorAll('#itemGrid input:checked').length >= 6 && !c.checked) opt.classList.add('disabled');
+            else opt.classList.remove('disabled');
+        });
+    };
+    itemGrid.appendChild(div);
+});
+
+let searching = false;
+function getHash(x, y, z, seed, q) {
+    let h = Math.imul(seed, 31) + q; h |= 0;
+    h = Math.imul(h, 31) + x; h |= 0;
+    h = Math.imul(h, 31) + y; h |= 0;
+    h = Math.imul(h, 31) + z; h |= 0;
+    return h;
+}
+
+function getShuffled(seed, id) {
+    let list = [...LootItems];
+    let h = getHash(0, 0, 0, seed, 0);
+    let rng = new NetRandom(Math.imul(h, 31) + id);
+    for (let i = list.length - 1; i > 0; i--) {
+        let j = rng.next(0, i + 1);
+        [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+}
+
+function simulate(seed, targets) {
+    let assigned = new Set();
+    let shop = [];
+    let listA = getShuffled(seed, 45018);
+    for (let i = 0; i < 5; i++) {
+        let h = getHash(shelfCoords[i][0], shelfCoords[i][1], shelfCoords[i][2], seed, 0);
+        let rng = new NetRandom(Math.imul(h, 31) + 45018);
+        let start = rng.next(0, listA.length);
+        for (let j = 0; j < listA.length; j++) {
+            let item = listA[(start + j) % listA.length];
+            if (!assigned.has(item)) { assigned.add(item); shop.push(item); break; }
+        }
+    }
+    let listB = getShuffled(seed, 49038);
+    let h6 = getHash(shelfCoords[5][0], shelfCoords[5][1], shelfCoords[5][2], seed, 0);
+    let rng6 = new NetRandom(Math.imul(h6, 31) + 49038);
+    shop.push(listB[rng6.next(0, listB.length) % listB.length]);
+
+    let hits = shop.filter(item => targets.includes(item)).length;
+    return { ok: hits === targets.length, shop };
+}
+
+async function startSearch() {
+    const start = parseInt(document.getElementById('start').value);
+    const end = parseInt(document.getElementById('end').value);
+    const targets = Array.from(document.querySelectorAll('#itemGrid input:checked')).map(i => i.value);
+    const resBody = document.getElementById('results');
+    if (targets.length === 0) return alert("Select targets first.");
+    
+    searching = true;
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = false;
+    document.getElementById('progress-box').style.display = 'block';
+    resBody.innerHTML = "";
+
+    const range = end - start;
+    for (let cur = start; cur < end && searching; cur += 500) {
+        let p = ((cur - start) / range) * 100;
+        document.getElementById('bar').style.width = p + "%";
+        document.getElementById('percent').innerText = Math.round(p) + "%";
+        document.getElementById('status').innerText = `Checking: ${cur}`;
+        for (let s = cur; s < Math.min(cur + 500, end); s++) {
+            let r = simulate(s, targets);
+            if (r.ok) {
+                let row = `<tr>
+                    <td class="seed-val" onclick="copyValue('${s}')">${s}</td>
+                    <td>${r.shop.map((n, i) => `<span class="tag ${targets.includes(n)?'target':''}"><b>#${i+1}</b>${n}</span>`).join('')}</td>
+                </tr>`;
+                resBody.insertAdjacentHTML('beforeend', row);
+            }
+        }
+        await new Promise(r => setTimeout(r, 0));
+    }
+    searching = false;
+    document.getElementById('searchBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
+    document.getElementById('status').innerText = "Finished";
+}
+
+function stopSearch() { searching = false; }
+function copyPath() { 
+    navigator.clipboard.writeText(document.getElementById('savePath').innerText); 
+    alert("Save path copied!");
+}
+function copyValue(val) {
+    navigator.clipboard.writeText(val);
+    alert("Seed " + val + " copied!");
+}
+</script>
+</body>
+</html>
