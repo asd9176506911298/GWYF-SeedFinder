@@ -3,129 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GWYF Seed Finder V6</title>
+    <title>GWYF Seed Finder</title>
     <style>
-        :root { --primary: #00ff95; --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --warn: #ffcc00; --lookup: #00d4ff; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 900px; margin: 0 auto; padding: 20px; }
-        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-        h1 { color: var(--primary); text-align: center; margin-bottom: 5px; }
-        
-        /* Sections */
-        .section { background: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .section-title { font-size: 0.75em; color: var(--primary); font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: block; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        /* 色盲友善色盤：藍色 (#0072B2) 與 橙黃色 (#E69F00) */
+        :root {
+            --bg: #f8f9fa;
+            --text: #212529;
+            --card-bg: #ffffff;
+            --border: #dee2e6;
+            --primary: #0072b2;   /* 穩定藍：主要動作 */
+            --accent: #e69f00;    /* 亮橙黃：目標高亮 (對色盲極度清晰) */
+            --secondary: #565e64;
+            --lookup-bg: #e7f3ff;
+            --danger: #d55e00;    /* 深橙：警告或停止 */
+        }
 
-        /* Path Styling */
-        .path-container { display: flex; gap: 10px; align-items: center; }
-        .path-text { font-family: monospace; font-size: 0.85em; color: #8b949e; flex: 1; }
+        /* 暗色模式自動適應，減少眼睛疲勞 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1a1d20;
+                --text: #e9ecef;
+                --card-bg: #2b3035;
+                --border: #495057;
+                --lookup-bg: #0d2a47;
+            }
+        }
 
-        /* Lookup Styling */
-        .lookup-grid { display: flex; gap: 10px; align-items: flex-end; }
-        .lookup-input { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-        #checkSeedInput { background: #010409; border: 1px solid var(--lookup); color: #fff; padding: 10px; border-radius: 6px; font-weight: bold; }
-        #lookupBtn { background: var(--lookup); color: #000; border: none; padding: 11px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            margin: 0;
+            padding: 20px;
+        }
 
-        .warning-box { background: rgba(255, 204, 0, 0.1); border: 1px solid var(--warn); color: var(--warn); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85em; }
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
 
-        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin: 15px 0; }
-        .item-option { display: flex; align-items: center; background: #21262d; padding: 10px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); transition: 0.15s; font-size: 0.85em; }
-        .item-option.selected { border-color: var(--primary); background: rgba(0,255,149,0.1); }
-        .item-option.disabled { opacity: 0.3; cursor: not-allowed; }
-        .item-option input { margin-right: 10px; pointer-events: none; }
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            font-weight: 700;
+            color: var(--primary);
+        }
 
-        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px; align-items: flex-end; }
-        input { background: #010409; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 6px; }
-        
-        button { background: var(--primary); color: #0d1117; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { opacity: 0.8; }
-        #stopBtn { background: #da3633; color: white; }
+        /* 存檔路徑區塊 */
+        .path-section {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
 
-        #progress-box { margin: 20px 0; display: none; }
-        .bar-bg { background: #30363d; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
-        .bar-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
+        .label-sm {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--secondary);
+            margin-bottom: 5px;
+        }
 
-        .table-scroll { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; background: #161b22; }
-        th { background: #21262d; padding: 12px; text-align: left; color: var(--primary); border-bottom: 2px solid var(--border); font-size: 0.9em; }
-        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9em; }
-        
-        .seed-val { font-family: monospace; color: #ffcc00; font-weight: bold; cursor: pointer; text-decoration: underline; }
-        .tag { padding: 3px 8px; border-radius: 4px; font-size: 0.8em; background: #0d1117; color: #444; border: 1px solid #333; margin-right: 5px; display: inline-block; margin-bottom: 3px; }
-        .tag.target { border-color: var(--primary); color: var(--primary); background: rgba(0,255,149,0.1); }
-        .tag.highlight { border-color: var(--lookup); color: var(--lookup); font-weight: bold; }
+        .path-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .path-text {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: filter 0.2s;
+        }
+
+        .btn:hover { filter: brightness(90%); }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text); }
+
+        /* 查詢區塊 */
+        .lookup-box {
+            background-color: var(--lookup-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+            margin-bottom: 25px;
+        }
+
+        .lookup-flex {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        input[type="number"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        /* 物品網格 */
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 10px;
+            margin: 15px 0 25px;
+        }
+
+        .item-chip {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            background: var(--card-bg);
+        }
+
+        .item-chip:hover:not(.disabled) { border-color: var(--primary); }
+        .item-chip.selected { 
+            border-color: var(--accent); 
+            background-color: rgba(230, 159, 0, 0.1); 
+            font-weight: bold;
+        }
+        .item-chip.disabled { opacity: 0.3; cursor: not-allowed; }
+        .item-chip input { margin-right: 10px; }
+
+        /* 搜尋控制 */
+        .search-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.5fr;
+            gap: 15px;
+            align-items: flex-end;
+            padding: 20px;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-danger:disabled { background-color: var(--secondary); opacity: 0.5; }
+
+        /* 表格結果 */
+        .table-wrap {
+            margin-top: 30px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: var(--bg);
+            padding: 12px;
+            text-align: left;
+            font-size: 0.8rem;
+            color: var(--secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td { padding: 12px; border-bottom: 1px solid var(--border); }
+        .row-highlight { background-color: var(--lookup-bg); }
+
+        /* 商店物品顯示 */
+        .shop-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag {
+            padding: 4px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .tag b { color: var(--primary); margin-right: 4px; }
+        .tag.match { 
+            border-color: var(--accent); 
+            background-color: var(--accent); 
+            color: #000; /* 確保橙色背景上的黑色文字可讀 */
+            font-weight: bold; 
+        }
+        .tag.fixed { opacity: 0.6; font-style: italic; }
+
+        .seed-link {
+            color: var(--primary);
+            font-family: monospace;
+            font-weight: 700;
+            text-decoration: underline;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h1>GWYF Seed Finder V6</h1>
+<div class="container">
+    <h1>GWYF Seed Finder</h1>
 
-    <!-- 1. Path Info -->
-    <div class="section">
-        <span class="section-title">Saves Folder Path (Win + R)</span>
-        <div class="path-container">
+    <!-- Save Path Info -->
+    <div class="path-section">
+        <span class="label-sm">Save Path (Press <b>Win + R</b> then paste)</span>
+        <div class="path-row">
             <div class="path-text" id="savePath">%AppData%\..\LocalLow\TENSTACK\Gamble With Your Friends\Saves</div>
-            <button style="padding: 5px 10px; font-size: 0.8em; background:#30363d; color:#fff;" onclick="copyPath()">Copy Path</button>
+            <button class="btn btn-outline" onclick="copyText(document.getElementById('savePath').innerText)">Copy Path</button>
         </div>
     </div>
 
-    <!-- 2. Single Seed Lookup -->
-    <div class="section" style="border-color: var(--lookup);">
-        <span class="section-title" style="color: var(--lookup);">Query Specific Seed</span>
-        <div class="lookup-grid">
-            <div class="lookup-input">
-                <label style="font-size: 0.7em; color: #8b949e;">ENTER SEED NUMBER</label>
-                <input type="number" id="checkSeedInput" placeholder="e.g. -11947">
-            </div>
-            <button id="lookupBtn" onclick="lookupSeed()">Check Shop Contents</button>
+    <!-- Lookup Section -->
+    <div class="lookup-box">
+        <span class="label-sm" style="color: var(--primary)">Quick Lookup (Single Seed)</span>
+        <div class="lookup-flex">
+            <input type="number" id="checkSeedInput" placeholder="Enter Seed Number...">
+            <button class="btn btn-primary" onclick="lookupSeed()">Check Contents</button>
         </div>
     </div>
-    
-    <div class="warning-box">
-        <b>NOTE:</b> In the 6th slot, the item has a high chance of being replaced by a <b>Mystery Box</b> in-game.
-    </div>
 
-    <!-- 3. Range Search -->
-    <div class="section">
-        <span class="section-title">Find Seeds in Range</span>
-        <div style="font-size: 0.85em; margin-bottom: 5px;">Select Required Targets (Max 6): <span id="count" style="color:var(--primary); font-weight:bold;">0</span></div>
+    <!-- Range Search Section -->
+    <div class="search-section">
+        <span class="label-sm">Required Items (Max 5) — <span id="counter">0</span>/5 selected</span>
         <div class="item-grid" id="itemGrid"></div>
-        <div class="controls">
-            <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size: 0.75em; color: #8b949e;">START</label><input type="number" id="start" value="-2000"></div>
-            <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size: 0.75em; color: #8b949e;">END</label><input type="number" id="end" value="2000"></div>
-            <div style="display:flex; gap:10px;">
-                <button id="searchBtn" onclick="startSearch()" style="flex:2;">Search Range</button>
-                <button id="stopBtn" onclick="stopSearch()" disabled style="flex:1;">Stop</button>
+
+        <div class="search-area">
+            <div>
+                <label class="label-sm">Start Seed</label>
+                <input type="number" id="start" value="-200000">
+            </div>
+            <div>
+                <label class="label-sm">End Seed</label>
+                <input type="number" id="end" value="200000">
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" id="startBtn" style="flex: 2;" onclick="startSearch()">Start Range Scan</button>
+                <button class="btn btn-danger" id="stopBtn" style="flex: 1;" onclick="stopSearch()" disabled>Stop</button>
             </div>
         </div>
     </div>
 
-    <div id="progress-box">
-        <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#8b949e;">
-            <span id="status">Ready</span>
-            <span id="percent">0%</span>
-        </div>
-        <div class="bar-bg"><div class="bar-fill" id="bar"></div></div>
-    </div>
-
-    <div class="table-scroll">
+    <!-- Results Table -->
+    <div class="table-wrap">
         <table>
             <thead>
                 <tr>
-                    <th style="width: 100px;">Seed</th>
-                    <th>Shop Contents (Slot 1-6)</th>
+                    <th style="width: 120px;">SEED</th>
+                    <th>ACTUAL SHOP CONTENTS (Slot 6 is Locked MysteryBox)</th>
                 </tr>
             </thead>
-            <tbody id="results">
-                <tr><td colspan="2" style="text-align:center; padding:30px; color:#555;">Query a seed above or search a range.</td></tr>
-            </tbody>
+            <tbody id="results"></tbody>
         </table>
     </div>
 </div>
 
 <script>
+// --- Constants & Data ---
 const LootItems = ["UpgradeBonusDraw", "UpgradeInsurance", "UpgradeGamblersConfidence", "UpgradeStakeHolder", "Coordinator", "Drink", "GoldenChip", "ImmunityCross", "Microphone", "Taser", "DevilsReel", "QuotaGun", "MysteryBox", "AngelsReel", "TimeMachine"];
 const shelfCoords = [[1172, 265, 1754], [1297, 265, 1754], [1422, 265, 1754], [1547, 265, 1754], [1672, 265, 1754], [1797, 265, 1754]];
 
+// --- .NET Random Emulator ---
 class NetRandom {
     constructor(seed) {
         let s = (seed === -2147483648) ? 2147483647 : Math.abs(seed);
@@ -157,27 +314,28 @@ class NetRandom {
     next(min, max) { return Math.floor((this.sample() * (1.0 / 2147483647.0)) * (max - min)) + min; }
 }
 
+// --- UI Construction ---
 const itemGrid = document.getElementById('itemGrid');
 LootItems.forEach(item => {
     const div = document.createElement('div');
-    div.className = 'item-option';
+    div.className = 'item-chip';
     div.innerHTML = `<input type="checkbox" value="${item}"><span>${item}</span>`;
     div.onclick = () => {
         const cb = div.querySelector('input');
         const checked = document.querySelectorAll('#itemGrid input:checked');
-        if (!cb.checked && checked.length >= 6) return;
+        if (!cb.checked && checked.length >= 5) return;
         cb.checked = !cb.checked;
         div.classList.toggle('selected', cb.checked);
-        document.getElementById('count').innerText = document.querySelectorAll('#itemGrid input:checked').length;
-        document.querySelectorAll('.item-option').forEach(opt => {
+        document.getElementById('counter').innerText = document.querySelectorAll('#itemGrid input:checked').length;
+        document.querySelectorAll('.item-chip').forEach(opt => {
             const c = opt.querySelector('input');
-            if (document.querySelectorAll('#itemGrid input:checked').length >= 6 && !c.checked) opt.classList.add('disabled');
-            else opt.classList.remove('disabled');
+            opt.classList.toggle('disabled', document.querySelectorAll('#itemGrid input:checked').length >= 5 && !c.checked);
         });
     };
     itemGrid.appendChild(div);
 });
 
+// --- Logic ---
 function getHash(x, y, z, seed, q) {
     let h = Math.imul(seed, 31) + q; h |= 0;
     h = Math.imul(h, 31) + x; h |= 0;
@@ -210,73 +368,57 @@ function getShopItems(seed) {
             if (!assigned.has(item)) { assigned.add(item); shop.push(item); break; }
         }
     }
-    let listB = getShuffled(seed, 49038);
-    let h6 = getHash(shelfCoords[5][0], shelfCoords[5][1], shelfCoords[5][2], seed, 0);
-    let rng6 = new NetRandom(Math.imul(h6, 31) + 49038);
-    shop.push(listB[rng6.next(0, listB.length) % listB.length]);
+    shop.push("MysteryBox"); // Slot 6 logic
     return shop;
 }
 
-// Single Seed Lookup
-function lookupSeed() {
-    const seed = parseInt(document.getElementById('checkSeedInput').value);
-    if (isNaN(seed)) return alert("Please enter a valid seed number.");
-    const targets = Array.from(document.querySelectorAll('#itemGrid input:checked')).map(i => i.value);
-    const shop = getShopItems(seed);
-    const resBody = document.getElementById('results');
-    
-    let row = `<tr style="background: rgba(0, 212, 255, 0.1);">
-        <td class="seed-val" onclick="copyValue('${seed}')">${seed}</td>
-        <td>${shop.map((n, i) => {
-            let cls = targets.includes(n) ? 'target' : 'highlight';
-            return `<span class="tag ${cls}"><b>#${i+1}</b>${n}</span>`;
-        }).join('')}</td>
+function render(s, shop, targets, highlight = false) {
+    const body = document.getElementById('results');
+    let row = `<tr class="${highlight ? 'row-highlight' : ''}">
+        <td class="seed-link" onclick="copyText('${s}')">${s}</td>
+        <td><div class="shop-list">${shop.map((n, i) => {
+            let isT = targets.includes(n);
+            let cls = isT ? 'match' : (i === 5 ? 'fixed' : '');
+            return `<div class="tag ${cls}"><b>#${i+1}</b>${n}</div>`;
+        }).join('')}</div></td>
     </tr>`;
-    resBody.insertAdjacentHTML('afterbegin', row);
+    body.insertAdjacentHTML(highlight ? 'afterbegin' : 'beforeend', row);
 }
 
-// Range Search
-let searching = false;
+// --- Actions ---
+function lookupSeed() {
+    const s = parseInt(document.getElementById('checkSeedInput').value);
+    if (isNaN(s)) return;
+    const targets = Array.from(document.querySelectorAll('#itemGrid input:checked')).map(i => i.value);
+    render(s, getShopItems(s), targets, true);
+}
+
+let scanActive = false;
 async function startSearch() {
     const start = parseInt(document.getElementById('start').value);
     const end = parseInt(document.getElementById('end').value);
     const targets = Array.from(document.querySelectorAll('#itemGrid input:checked')).map(i => i.value);
-    const resBody = document.getElementById('results');
-    if (targets.length === 0) return alert("Select target items to search for.");
+    if (targets.length === 0) return alert("Please select at least 1 item to search.");
     
-    searching = true;
-    document.getElementById('searchBtn').disabled = true;
+    scanActive = true;
+    document.getElementById('startBtn').disabled = true;
     document.getElementById('stopBtn').disabled = false;
-    document.getElementById('progress-box').style.display = 'block';
-    resBody.innerHTML = "";
+    document.getElementById('results').innerHTML = "";
 
-    for (let cur = start; cur < end && searching; cur += 500) {
-        let p = ((cur - start) / (end - start)) * 100;
-        document.getElementById('bar').style.width = p + "%";
-        document.getElementById('percent').innerText = Math.round(p) + "%";
-        document.getElementById('status').innerText = `Scanning: ${cur}`;
-        for (let s = cur; s < Math.min(cur + 500, end); s++) {
-            let shop = getShopItems(s);
-            let hits = shop.filter(item => targets.includes(item)).length;
-            if (hits === targets.length) {
-                let row = `<tr>
-                    <td class="seed-val" onclick="copyValue('${s}')">${s}</td>
-                    <td>${shop.map((n, i) => `<span class="tag ${targets.includes(n)?'target':''}"><b>#${i+1}</b>${n}</span>`).join('')}</td>
-                </tr>`;
-                resBody.insertAdjacentHTML('beforeend', row);
-            }
-        }
-        await new Promise(r => setTimeout(r, 0));
+    for (let s = start; s < end && scanActive; s++) {
+        let shop = getShopItems(s);
+        // Only check first 5 slots since slot 6 is locked
+        if (targets.every(t => shop.slice(0,5).includes(t))) render(s, shop, targets);
+        if (s % 2000 === 0) await new Promise(r => setTimeout(r, 0));
     }
-    searching = false;
-    document.getElementById('searchBtn').disabled = false;
+    scanActive = false;
+    document.getElementById('startBtn').disabled = false;
     document.getElementById('stopBtn').disabled = true;
-    document.getElementById('status').innerText = "Search Finished";
 }
 
-function stopSearch() { searching = false; }
-function copyPath() { navigator.clipboard.writeText(document.getElementById('savePath').innerText); alert("Save path copied!"); }
-function copyValue(val) { navigator.clipboard.writeText(val); alert("Seed " + val + " copied!"); }
+function stopSearch() { scanActive = false; }
+function copyText(txt) { navigator.clipboard.writeText(txt); alert("Copied to clipboard!"); }
 </script>
+
 </body>
 </html>
